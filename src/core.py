@@ -1,9 +1,12 @@
-import datazimmer as dz
-from .utils import get_soup
-from atqo import parallel_map
+import re
 from functools import partial
-from .meta import RealEstateRecord
+
+import datazimmer as dz
 import pandas as pd
+from atqo import parallel_map
+
+from .meta import RealEstateRecord
+from .utils import get_soup
 
 property_rec_table = dz.ScruTable(RealEstateRecord)
 
@@ -12,12 +15,6 @@ property_rec_table = dz.ScruTable(RealEstateRecord)
 def template_proc():
     property_rec_df = pd.concat(map(pd.DataFrame, get_all_property_id()))
     property_rec_table.extend(property_rec_df)
-
-
-def parse_page_count(soup):
-    return int(
-        soup.select_one(".results__number__count").get_text(strip=True).replace(" ", "")
-    )
 
 
 def parse_property_id(soup):
@@ -35,17 +32,9 @@ def _get_property_id(page: int, url: str):
     return parse_property_id(soup=soup)
 
 
-def parse_page_count(soup):
-    return int(
-        soup.select_one(".results__number__count").get_text(strip=True).replace(" ", "")
-    )
-
-
-def parse_property_id(soup):
-    return [
-        {"property_id": int(elem.get("data-id"))}
-        for elem in soup.select(".resultspage__main .listing")
-    ]
+def parse_page_count(soup) -> int:
+    pagination_text = soup.select_one(".pagination__page-number").get_text(strip=True)
+    return int(re.search(r"(\d+) / (\d+) oldal", pagination_text).group(2))
 
 
 def get_all_property_id():
