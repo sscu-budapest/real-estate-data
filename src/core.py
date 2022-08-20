@@ -54,7 +54,7 @@ def get_all_property_id():
     property_ids = parallel_map(
         partial(_get_property_id, url=BASE_SEARCH_URL),
         [*all_page],
-        workers=5,
+        workers=1,
         dist_api="sync",
         pbar=True,
         raise_errors=True,

@@ -1,0 +1,5 @@
+stages:
+  complete-core:
+    cmd: dz run-step complete-core
+    deps:
+    - src/core.py
