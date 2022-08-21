@@ -3,3 +3,6 @@ stages:
     cmd: dz run-step complete-core
     deps:
     - src/core.py
+    outs:
+    - data/tempartifact/core/complete/real_estate_record.parquet:
+        persist: true
