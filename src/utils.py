@@ -1,9 +1,15 @@
+import re
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-import requests
-from bs4 import BeautifulSoup
 from pytz import timezone
-from user_agent import generate_user_agent
+from structlog import get_logger
+
+if TYPE_CHECKING:
+    import datazimmer as dz
+    import pandas as pd
+
+logger = get_logger()
 
 
 def _get_now() -> datetime:
@@ -11,19 +17,19 @@ def _get_now() -> datetime:
     return now + timezone("Europe/Budapest").utcoffset(now)
 
 
-def get_soup(url: str, params: dict = None):
-    response = requests.get(
-        url,
-        params=params,
-        headers={"User-Agent": generate_user_agent()},
+def _check_missing_col(df: "pd.DataFrame", table: "dz.ScruTable"):
+    remaining_df = df.dropna(axis=1, how="all").drop(
+        columns=table.feature_cols, errors="ignore"
     )
-    if response.status_code == 200:
-        return BeautifulSoup(response.content, "html5lib", from_encoding="utf-8")
+    if remaining_df.empty:
+        return df.reindex(table.feature_cols, axis=1)
     else:
-        if response.status_code == 404:
-            return None
-        if response.status_code == 410:
-            return None
-        elif response.status_code == 502:
-            return get_soup(url=url, params=params)
-        response.raise_for_status()
+        logger.exception(
+            "Missing variable",
+            cols=remaining_df.columns,
+        )
+        raise AssertionError("Missing variable")
+
+
+def _parse_url(url):
+    return int(re.search(r"https://ingatlan.com/(\d+)", url).group(1))

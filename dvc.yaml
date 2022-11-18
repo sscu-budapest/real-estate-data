@@ -1,27 +1,4 @@
 stages:
-  complete-core:
-    cmd: dz run-step complete-core
-    deps:
-    - src/core.py
-    outs:
-    - data/tempartifact/core/complete/contact.parquet:
-        persist: true
-    - data/tempartifact/core/complete/heating.parquet:
-        persist: true
-    - data/tempartifact/core/complete/label.parquet:
-        persist: true
-    - data/tempartifact/core/complete/parking.parquet:
-        persist: true
-    - data/tempartifact/core/complete/price.parquet:
-        persist: true
-    - data/tempartifact/core/complete/real_estate.parquet:
-        persist: true
-    - data/tempartifact/core/complete/real_estate_record.parquet:
-        persist: true
-    - data/tempartifact/core/complete/seller.parquet:
-        persist: true
-    - data/tempartifact/core/complete/utility_cost.parquet:
-        persist: true
   complete-ingatlan:
     cmd: dz run-step ingatlan complete
     deps:
