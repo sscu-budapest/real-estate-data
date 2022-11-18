@@ -1,2 +1,6 @@
 name: tempartifact
 version: v0.0
+aswan_projects:
+  ingatlan:
+    processed_upto_by_ns: {}
+    current_leaf: ce4bd79c84c63d7ea124

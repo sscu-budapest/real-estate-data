@@ -1,1 +1,9 @@
 /real_estate_record.parquet
+/real_estate.parquet
+/seller.parquet
+/parking.parquet
+/price.parquet
+/heating.parquet
+/utility_cost.parquet
+/contact.parquet
+/label.parquet
