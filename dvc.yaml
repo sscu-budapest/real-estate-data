@@ -22,3 +22,13 @@ stages:
         persist: true
     - data/tempartifact/core/complete/utility_cost.parquet:
         persist: true
+  complete-ingatlan:
+    cmd: dz run-step ingatlan complete
+    deps:
+    - src/ingatlan.py
+    params:
+    - zimmer.yaml:
+      - aswan_projects.ingatlan.current_leaf
+    outs:
+    - data/tempartifact/ingatlan/complete:
+        persist: true
