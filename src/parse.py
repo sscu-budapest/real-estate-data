@@ -14,6 +14,8 @@ from .meta import (
     UtilityCost,
 )
 
+from datetime import datetime
+
 
 def parse_property(df: pd.DataFrame):
     return (
@@ -34,6 +36,7 @@ def parse_property(df: pd.DataFrame):
         )
         .assign(
             **{
+                # RealEstate.available_from: lambda _df: _df[RealEstate.available_from].apply(datetime.fromisoformat)
                 RealEstate.available_from: lambda _df: pd.to_datetime(
                     _df[RealEstate.available_from], errors="coerce"
                 ),
@@ -97,7 +100,11 @@ def parse_parking(df: pd.DataFrame):
         .apply(pd.Series)
         .pipe(
             lambda _df: pd.concat(
-                [_df.drop(columns="price"), _df["price"].apply(pd.Series)], axis=1
+                [
+                    _df.drop(columns="price"),
+                    _df["price"].apply(lambda _s: pd.Series(_s, dtype="object")),
+                ],
+                axis=1,
             )
             if "price" in _df.columns
             else _df

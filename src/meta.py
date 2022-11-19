@@ -22,13 +22,16 @@ class RealEstate(dz.AbstractEntity):
     offer_type = str
     area_size = float
     attic_type = str
-    available_from = dt.datetime
+    available_from = str
     balcony_size = float
     bathroom_toilet_separation = str
     building_floor_count = str
     comfort_level = str
     condition = str
     energy_efficiency_rating = str
+    without_gas_connection = str
+    energy_efficient = str
+    is_deleted = str
     floor = str
     furnishment = str
     has_air_conditioner = float
@@ -42,10 +45,16 @@ class RealEstate(dz.AbstractEntity):
     location_id = Location
     orientation = str
     participated_in_the_panel_program = float
+    solar_panel = str
     room_count = float
     small_room_count = float
     subtype = str
     type = str
+    common_charges = str
+    average_gas_consumption = str
+    average_electric_consumption = str
+    insulation = str
+    insulation_thickness = str
     view = str
     year_of_construction = float
     minimum_rental_period_month = float
@@ -58,11 +67,11 @@ class RealEstate(dz.AbstractEntity):
     is_rental_right_offer = float
     is_outdated = float
     is_active = float
-    updated_at = dt.datetime
+    updated_at = str
     seller_id = Seller
     lot_size = float
     has_basement = float
-
+    tender_document = str
 
 class Contact(dz.AbstractEntity):
     property_id = dz.Index & RealEstate

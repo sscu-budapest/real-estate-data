@@ -1,7 +1,6 @@
 import json
 import re
 from datetime import datetime
-from functools import partial
 from typing import TYPE_CHECKING, Union
 
 import aswan
@@ -10,8 +9,9 @@ import pandas as pd
 from aswan import Project
 from aswan.utils import add_url_params
 from atqo import parallel_map
+from bs4 import BeautifulSoup
 
-from src.meta import (
+from .meta import (
     Contact,
     Heating,
     Label,
@@ -23,7 +23,6 @@ from src.meta import (
     Seller,
     UtilityCost,
 )
-
 from .parse import (
     parse_contact,
     parse_heating,
@@ -38,7 +37,7 @@ from .parse import (
 from .utils import _check_missing_col, _parse_url
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
+    from aswan.models import CollEvent
 
 SLEEP_TIME = 3
 
@@ -136,23 +135,18 @@ UNUSED_COLS = [
     "street_number_coordinates",
 ]
 
-PARSER_MAPPING = [
-    ("utility_costs", parse_utility_cost, utility_cost_table),
-    ("prices", parse_price, price_table),
-    ("contact_phone_numbers", parse_contact, contact_table),
-    ("heating_types", parse_heating, heating_table),
-    ("parking", parse_parking, parking_table),
-    ("labels", parse_label, label_table),
-    ("seller", parse_seller, seller_table),
-]
+PARSER_MAPPING = {
+    "utility_costs": (parse_utility_cost, utility_cost_table),
+    "prices": (parse_price, price_table),
+    "contact_phone_numbers": (parse_contact, contact_table),
+    "heating_types": (parse_heating, heating_table),
+    "parking": (parse_parking, parking_table),
+    "labels": (parse_label, label_table),
+    "seller": (parse_seller, seller_table),
+}
 
 
-def parse_soup(
-    soup: "BeautifulSoup",
-    property_table: dz.ScruTable,
-    parser_mapping: dict,
-    location_table: dz.ScruTable,
-):
+def parse_soup(soup: "BeautifulSoup"):
 
     data_elem = soup.select_one("#listing")
 
@@ -161,17 +155,17 @@ def parse_soup(
         parse_property
     )
 
-    for colname, (parser, table) in parser_mapping.items():
+    for colname, (parser, table) in PARSER_MAPPING.items():
         if property_df[colname].astype(bool).all():
             (
                 parser(property_df)
                 .reindex(table.feature_cols, axis=1)
-                .pipe(lambda _df: table.replace_records(_df, env="complete"))
+                .pipe(lambda _df: table.replace_records(_df))
             )
 
     property_df = (
         property_df.drop(
-            columns=[*UNUSED_COLS, *parser_mapping.keys()], errors="ignore"
+            columns=[*UNUSED_COLS, *PARSER_MAPPING.keys()], errors="ignore"
         )
         .pipe(lambda _df: _check_missing_col(df=_df, table=property_table))
         .pipe(property_table.replace_records)
@@ -183,46 +177,37 @@ def parse_soup(
     ).pipe(location_table.replace_records)
 
 
-def parse_cev(cev: "aswan.models.CollEvent", property_rec_table: dz.ScruTable):
-    pd.DataFrame(
-        [
-            {
-                RealEstateRecord.recorded: datetime.fromtimestamp(cev.timestamp),
-                RealEstateRecord.property_id: _parse_url(cev.url),
-            }
-        ]
-    ).pipe(property_rec_table.extend)
+def parse_cev(cev: "CollEvent"):
+    (
+        pd.DataFrame(
+            [
+                {
+                    RealEstateRecord.recorded: datetime.fromtimestamp(cev.timestamp),
+                    RealEstateRecord.property_id.id: _parse_url(cev.url),
+                }
+            ]
+        )
+        .set_index(property_rec_table.index_cols)
+        .pipe(property_rec_table.extend)
+    )
 
 
 def _parse_event(
     pcev: "aswan.depot.ParsedCollectionEvent",
-    property_table: dz.ScruTable,
-    location_table: dz.ScruTable,
-    property_rec_table: dz.ScruTable,
 ):
-    soup = BeautifulSoup(pcev.content, "html5")
-    parse_cev(pcev=pcev.cev, property_rec_table=property_rec_table)
-    parse_soup(
-        soup=soup,
-        property_table=property_table,
-        parser_mapping=PARSER_MAPPING,
-        location_table=location_table,
-    )
+    soup = BeautifulSoup(pcev.content, "html5lib")
+    parse_cev(cev=pcev.cev)
+    parse_soup(soup=soup)
 
 
 @dz.register_data_loader(extra_deps=[PropertyDzA])
 def collect():
     ap = PropertyDzA()
-    events = ap.get_unprocessed_events(AdHandler)
+    events = [*ap.get_unprocessed_events(AdHandler)]
     parallel_map(
-        partial(
-            _parse_event,
-            property_table=property_table,
-            location_table=location_table,
-            property_rec_table=property_rec_table,
-        ),
+        _parse_event,
         events,
-        dist_api="mp",
+        dist_api="sync",
         pbar=True,
         raise_errors=True,
     )

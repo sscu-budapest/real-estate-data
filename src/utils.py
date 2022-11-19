@@ -17,6 +17,10 @@ def _get_now() -> datetime:
     return now + timezone("Europe/Budapest").utcoffset(now)
 
 
+class MissingVariable(Exception):
+    "Missing variable from meta config"
+
+
 def _check_missing_col(df: "pd.DataFrame", table: "dz.ScruTable"):
     remaining_df = df.dropna(axis=1, how="all").drop(
         columns=table.feature_cols, errors="ignore"
@@ -24,11 +28,14 @@ def _check_missing_col(df: "pd.DataFrame", table: "dz.ScruTable"):
     if remaining_df.empty:
         return df.reindex(table.feature_cols, axis=1)
     else:
-        logger.exception(
-            "Missing variable",
-            cols=remaining_df.columns,
-        )
-        raise AssertionError("Missing variable")
+        try:
+            raise MissingVariable
+        except MissingVariable as ec:
+            logger.exception(
+                "Missing variable",
+                cols=remaining_df.columns,
+            )
+            raise ec
 
 
 def _parse_url(url):

@@ -7,5 +7,5 @@ stages:
     - zimmer.yaml:
       - aswan_projects.ingatlan.current_leaf
     outs:
-    - data/tempartifact/ingatlan/complete:
+    - data/ingatlan/ingatlan/complete:
         persist: true
