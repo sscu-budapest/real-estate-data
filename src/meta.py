@@ -72,6 +72,8 @@ class RealEstate(dz.AbstractEntity):
     lot_size = float
     has_basement = float
     tender_document = str
+    operational_cost = str
+
 
 class Contact(dz.AbstractEntity):
     property_id = dz.Index & RealEstate

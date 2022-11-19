@@ -45,6 +45,7 @@ main_url = dz.SourceUrl("https://ingatlan.com/lista/kiado+lakas")
 
 
 class AdHandler(aswan.RequestHandler):
+    process_indefinitely: bool = True
     url_root = "https://ingatlan.com"
 
     def parse(self, blob):
@@ -72,7 +73,7 @@ class ListingHandler(aswan.RequestSoupHandler):
             links=[f"{AdHandler.url_root}/{ad_id}" for ad_id in ad_ids],
             handler_cls=AdHandler,
         )
-        return ad_ids
+        return soup.encode("utf-8")
 
     @staticmethod
     def get_sleep_time():
