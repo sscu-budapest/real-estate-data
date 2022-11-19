@@ -89,7 +89,7 @@ def get_page_listings(soup: "BeautifulSoup") -> list:
     return [
         add_url_params(main_url, {"page": p})
         for p in range(1, _parse_page_count(soup=soup) + 1)
-    ][:5]
+    ]
 
 
 class InitHandler(aswan.RequestSoupHandler):
