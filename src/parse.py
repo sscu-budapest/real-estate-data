@@ -14,8 +14,6 @@ from .meta import (
     UtilityCost,
 )
 
-from datetime import datetime
-
 
 def parse_property(df: pd.DataFrame):
     return (
@@ -36,16 +34,9 @@ def parse_property(df: pd.DataFrame):
         )
         .assign(
             **{
-                # RealEstate.available_from: lambda _df: _df[RealEstate.available_from].apply(datetime.fromisoformat)
                 RealEstate.available_from: lambda _df: pd.to_datetime(
                     _df[RealEstate.available_from], errors="coerce"
                 ),
-                # RealEstate.available_from: lambda _df: _df[
-                #     RealEstate.available_from
-                # ].mask(
-                #     pd.to_datetime(_df["available_from"], errors="coerce").isna(),
-                #     other=None,
-                # ),
             }
         )
     )
