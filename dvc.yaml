@@ -1,8 +1,11 @@
 stages:
-  complete-core:
-    cmd: dz run-step complete-core
+  complete-ingatlan:
+    cmd: dz run-step ingatlan complete
     deps:
-    - src/core.py
+    - src/ingatlan.py
+    params:
+    - zimmer.yaml:
+      - aswan_projects.ingatlan.current_leaf
     outs:
-    - data/tempartifact/core/complete/real_estate_record.parquet:
+    - data/ingatlan/ingatlan/complete:
         persist: true

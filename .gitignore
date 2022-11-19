@@ -167,3 +167,7 @@ Manifest.toml
 ### Custom
 dask-worker-space
 .vscode
+
+listing/
+source_data/
+location/
