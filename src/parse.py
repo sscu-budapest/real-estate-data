@@ -12,7 +12,12 @@ from .meta import (
     RealEstate,
     Seller,
     UtilityCost,
+    RealEstateRecord,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
 
 
 def parse_property(df: pd.DataFrame):
@@ -196,6 +201,38 @@ def parse_contact(df: pd.DataFrame):
         )
         .set_index([Contact.property_id.id, Contact.phone_number])
     )
+
+
+def parse_listing_data(card: "BeautifulSoup", selector: str):
+    if elem := card.select_one(selector):
+        return elem.get_text(strip=True)
+
+
+def parse_listing_ad_id(card: "BeautifulSoup"):
+    return card.get("data-id")
+
+
+def parse_listing(soup: "BeautifulSoup"):
+    return [
+        {
+            RealEstateRecord.property_id.id: parse_listing_ad_id(card),
+            RealEstateRecord.photo_count: (
+                parse_listing_data(card, ".listing__photos-count")
+            ),
+            RealEstateRecord.price: parse_listing_data(card, ".price"),
+            RealEstateRecord.address: parse_listing_data(card, ".listing__address"),
+            RealEstateRecord.area_size: (
+                parse_listing_data(card, ".listing__data--area-size")
+            ),
+            RealEstateRecord.room_count: (
+                parse_listing_data(card, ".listing__data--room-count")
+            ),
+            RealEstateRecord.balcony_size: (
+                parse_listing_data(card, ".listing__data--balcony-size")
+            ),
+        }
+        for card in soup.select(".listing")
+    ]
 
 
 def _camel_to_snake(name):

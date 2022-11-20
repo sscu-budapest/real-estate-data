@@ -33,6 +33,7 @@ from .parse import (
     parse_property,
     parse_seller,
     parse_utility_cost,
+    parse_listing,
 )
 from .utils import _check_missing_col, _parse_url
 
@@ -147,8 +148,8 @@ PARSER_MAPPING = {
 }
 
 
-def parse_soup(soup: "BeautifulSoup"):
-
+def parse_ad_pcev(pcev: "aswan.depot.ParsedCollectionEvent"):
+    soup = BeautifulSoup(pcev.content, "html5lib")
     data_elem = soup.select_one("#listing")
 
     # PROPERTY PARSING
@@ -178,36 +179,32 @@ def parse_soup(soup: "BeautifulSoup"):
     ).pipe(location_table.replace_records)
 
 
-def parse_cev(cev: "CollEvent"):
+def parse_listing_pcev(pcev: "aswan.depot.ParsedCollectionEvent"):
     (
-        pd.DataFrame(
-            [
-                {
-                    RealEstateRecord.recorded: datetime.fromtimestamp(cev.timestamp),
-                    RealEstateRecord.property_id.id: _parse_url(cev.url),
-                }
-            ]
+        pd.DataFrame(parse_listing(BeautifulSoup(pcev.content, "html5lib")))
+        .assign(
+            **{RealEstateRecord.recorded: datetime.fromtimestamp(pcev.cev.timestamp)}
         )
         .set_index(property_rec_table.index_cols)
         .pipe(property_rec_table.extend)
     )
 
 
-def _parse_event(
-    pcev: "aswan.depot.ParsedCollectionEvent",
-):
-    soup = BeautifulSoup(pcev.content, "html5lib")
-    parse_cev(cev=pcev.cev)
-    parse_soup(soup=soup)
-
-
 @dz.register_data_loader(extra_deps=[PropertyDzA])
 def collect():
     ap = PropertyDzA()
-    events = [*ap.get_unprocessed_events(AdHandler)]
+    ad_events = [*ap.get_unprocessed_events(AdHandler)]
     parallel_map(
-        _parse_event,
-        events,
+        parse_ad_pcev,
+        ad_events,
+        dist_api="sync",
+        pbar=True,
+        raise_errors=True,
+    )
+    listing_events = [*ap.get_unprocessed_events(ListingHandler)]
+    parallel_map(
+        parse_listing_pcev,
+        listing_events,
         dist_api="sync",
         pbar=True,
         raise_errors=True,

@@ -92,6 +92,12 @@ class Price(dz.AbstractEntity):
 class RealEstateRecord(dz.AbstractEntity):
     property_id = dz.Index & RealEstate
     recorded = dz.Index & dt.datetime
+    photo_count = int
+    price = str
+    address = str
+    area_size = str
+    room_count = str
+    balcony_size = str
 
 
 class UtilityCost(dz.AbstractEntity):
