@@ -2,5 +2,6 @@ name: ingatlan
 version: v0.1
 aswan_projects:
   ingatlan:
-    processed_upto_by_ns: {}
+    processed_upto_by_ns:
+      ingatlan: 6acdb1fb03b8e9454c9c
     current_leaf: 6acdb1fb03b8e9454c9c
