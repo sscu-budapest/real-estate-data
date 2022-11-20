@@ -11,6 +11,6 @@ stages:
         aswan_projects.ingatlan.current_leaf: 6acdb1fb03b8e9454c9c
     outs:
     - path: data/ingatlan/ingatlan/complete
-      md5: 5f19f3bfa26c550885a77b9f9f246da6.dir
-      size: 6121493
-      nfiles: 6
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
