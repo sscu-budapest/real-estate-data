@@ -4,8 +4,8 @@ stages:
     cmd: dz run-step ingatlan complete
     deps:
     - path: src/ingatlan.py
-      md5: 08b8a2a280e95866dbc73f8e2ccd9fcc
-      size: 5621
+      md5: 7807a657de07c2b0ce9ae93baae402d2
+      size: 5622
     params:
       zimmer.yaml:
         aswan_projects.ingatlan.current_leaf: 6acdb1fb03b8e9454c9c
