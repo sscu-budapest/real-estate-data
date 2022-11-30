@@ -39,7 +39,8 @@ from .utils import _check_missing_col
 
 SLEEP_TIME = 3
 
-main_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
+rent_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
+sale_url = dz.SourceUrl("https://ingatlan.com/lista/elado")
 
 
 class AdHandler(aswan.RequestHandler):
@@ -83,26 +84,23 @@ def _parse_page_count(soup: "BeautifulSoup") -> int:
     return int(re.search(r"(\d+) / (\d+) oldal", pagination_text).group(2))
 
 
-def get_page_listings(soup: "BeautifulSoup") -> list:
-    return [
-        add_url_params(main_url, {"page": p})
-        for p in range(1, _parse_page_count(soup=soup) + 1)
-    ]
-
-
 class InitHandler(aswan.RequestSoupHandler):
-    url_root: main_url
-
     def parse(self, soup: "BeautifulSoup"):
+        url = soup.find("link", attrs={"rel": "alternate", "hreflang": "hu"}).get(
+            "href"
+        )
+        page_count = _parse_page_count(soup=soup)
+
         self.register_links_to_handler(
-            links=get_page_listings(soup), handler_cls=ListingHandler
+            links=[add_url_params(url, {"page": p}) for p in range(1, page_count + 1)],
+            handler_cls=ListingHandler,
         )
 
 
 class PropertyDzA(dz.DzAswan):
     name: str = "ingatlan"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [main_url], ListingHandler: [], AdHandler: []}
+    starters = {InitHandler: [rent_url, sale_url], ListingHandler: [], AdHandler: []}
 
     def extend_starters(self):
         self._project = Project(name=self.name, distributed_api="sync", max_cpu_use=1)
