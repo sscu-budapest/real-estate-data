@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import aswan
 import datazimmer as dz
@@ -27,22 +27,19 @@ from .parse import (
     parse_contact,
     parse_heating,
     parse_label,
+    parse_listing,
     parse_location,
     parse_parking,
     parse_price,
     parse_property,
     parse_seller,
     parse_utility_cost,
-    parse_listing,
 )
-from .utils import _check_missing_col, _parse_url
-
-if TYPE_CHECKING:
-    from aswan.models import CollEvent
+from .utils import _check_missing_col
 
 SLEEP_TIME = 3
 
-main_url = dz.SourceUrl("https://ingatlan.com/lista/kiado+lakas")
+main_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
 
 
 class AdHandler(aswan.RequestHandler):
@@ -192,20 +189,19 @@ def parse_listing_pcev(pcev: "aswan.depot.ParsedCollectionEvent"):
 
 @dz.register_data_loader(extra_deps=[PropertyDzA])
 def collect():
-    ap = PropertyDzA()
-    ad_events = [*ap.get_unprocessed_events(AdHandler)]
-    parallel_map(
-        parse_ad_pcev,
-        ad_events,
-        dist_api="sync",
-        pbar=True,
-        raise_errors=True,
+    list(
+        parallel_map(
+            parse_ad_pcev,
+            [*PropertyDzA().get_unprocessed_events(AdHandler)],
+            pbar=True,
+            raise_errors=True,
+        )
     )
-    listing_events = [*ap.get_unprocessed_events(ListingHandler)]
-    parallel_map(
-        parse_listing_pcev,
-        listing_events,
-        dist_api="sync",
-        pbar=True,
-        raise_errors=True,
+    list(
+        parallel_map(
+            parse_listing_pcev,
+            [*PropertyDzA().get_unprocessed_events(ListingHandler)],
+            pbar=True,
+            raise_errors=True,
+        )
     )
