@@ -100,7 +100,7 @@ class InitHandler(aswan.RequestSoupHandler):
 class PropertyDzA(dz.DzAswan):
     name: str = "ingatlan"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [rent_url, sale_url], ListingHandler: [], AdHandler: []}
+    starters = {InitHandler: [rent_url], ListingHandler: [], AdHandler: []}
 
     def extend_starters(self):
         self._project = Project(name=self.name, distributed_api="sync", max_cpu_use=1)
