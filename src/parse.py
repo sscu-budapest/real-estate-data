@@ -1,4 +1,5 @@
 import re
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
@@ -10,11 +11,10 @@ from .meta import (
     Parking,
     Price,
     RealEstate,
+    RealEstateRecord,
     Seller,
     UtilityCost,
-    RealEstateRecord,
 )
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup

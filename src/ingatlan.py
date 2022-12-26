@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import aswan
 import datazimmer as dz
@@ -27,22 +27,20 @@ from .parse import (
     parse_contact,
     parse_heating,
     parse_label,
+    parse_listing,
     parse_location,
     parse_parking,
     parse_price,
     parse_property,
     parse_seller,
     parse_utility_cost,
-    parse_listing,
 )
-from .utils import _check_missing_col, _parse_url
-
-if TYPE_CHECKING:
-    from aswan.models import CollEvent
+from .utils import _check_missing_col
 
 SLEEP_TIME = 3
 
-main_url = dz.SourceUrl("https://ingatlan.com/lista/kiado+lakas")
+rent_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
+sale_url = dz.SourceUrl("https://ingatlan.com/lista/elado")
 
 
 class AdHandler(aswan.RequestHandler):
@@ -86,26 +84,23 @@ def _parse_page_count(soup: "BeautifulSoup") -> int:
     return int(re.search(r"(\d+) / (\d+) oldal", pagination_text).group(2))
 
 
-def get_page_listings(soup: "BeautifulSoup") -> list:
-    return [
-        add_url_params(main_url, {"page": p})
-        for p in range(1, _parse_page_count(soup=soup) + 1)
-    ]
-
-
 class InitHandler(aswan.RequestSoupHandler):
-    url_root: main_url
-
     def parse(self, soup: "BeautifulSoup"):
+        url = soup.find("link", attrs={"rel": "alternate", "hreflang": "hu"}).get(
+            "href"
+        )
+        page_count = _parse_page_count(soup=soup)
+
         self.register_links_to_handler(
-            links=get_page_listings(soup), handler_cls=ListingHandler
+            links=[add_url_params(url, {"page": p}) for p in range(1, page_count + 1)],
+            handler_cls=ListingHandler,
         )
 
 
 class PropertyDzA(dz.DzAswan):
     name: str = "ingatlan"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [main_url], ListingHandler: [], AdHandler: []}
+    starters = {InitHandler: [rent_url], ListingHandler: [], AdHandler: []}
 
     def extend_starters(self):
         self._project = Project(name=self.name, distributed_api="sync", max_cpu_use=1)
@@ -192,20 +187,19 @@ def parse_listing_pcev(pcev: "aswan.depot.ParsedCollectionEvent"):
 
 @dz.register_data_loader(extra_deps=[PropertyDzA])
 def collect():
-    ap = PropertyDzA()
-    ad_events = [*ap.get_unprocessed_events(AdHandler)]
-    parallel_map(
-        parse_ad_pcev,
-        ad_events,
-        dist_api="sync",
-        pbar=True,
-        raise_errors=True,
+    list(
+        parallel_map(
+            parse_ad_pcev,
+            [*PropertyDzA().get_unprocessed_events(AdHandler)],
+            pbar=True,
+            raise_errors=True,
+        )
     )
-    listing_events = [*ap.get_unprocessed_events(ListingHandler)]
-    parallel_map(
-        parse_listing_pcev,
-        listing_events,
-        dist_api="sync",
-        pbar=True,
-        raise_errors=True,
+    list(
+        parallel_map(
+            parse_listing_pcev,
+            [*PropertyDzA().get_unprocessed_events(ListingHandler)],
+            pbar=True,
+            raise_errors=True,
+        )
     )
