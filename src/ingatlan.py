@@ -6,7 +6,6 @@ from typing import Union
 import aswan
 import datazimmer as dz
 import pandas as pd
-from aswan import Project
 from aswan.utils import add_url_params
 from atqo import parallel_map
 from bs4 import BeautifulSoup
@@ -40,10 +39,10 @@ from .utils import _check_missing_col
 SLEEP_TIME = 3
 
 rent_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
-sale_url = dz.SourceUrl("https://ingatlan.com/lista/elado")
 
 
 class AdHandler(aswan.RequestHandler):
+    max_in_parallel = 1
     process_indefinitely: bool = True
     url_root = "https://ingatlan.com"
 
@@ -66,6 +65,8 @@ class AdHandler(aswan.RequestHandler):
 
 
 class ListingHandler(aswan.RequestSoupHandler):
+    max_in_parallel = 1
+
     def parse(self, soup: "BeautifulSoup"):
         ad_ids = [int(e.get("data-id")) for e in soup.select(".listing")]
         self.register_links_to_handler(
@@ -101,9 +102,6 @@ class PropertyDzA(dz.DzAswan):
     name: str = "ingatlan"
     cron: str = "0 00 * * *"
     starters = {InitHandler: [rent_url], ListingHandler: [], AdHandler: []}
-
-    def extend_starters(self):
-        self._project = Project(name=self.name, distributed_api="sync", max_cpu_use=1)
 
 
 property_table = dz.ScruTable(RealEstate)
