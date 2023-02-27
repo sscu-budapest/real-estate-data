@@ -1,11 +1,12 @@
 import json
 import re
-from datetime import datetime
-from typing import Union
+from itertools import islice
+from typing import Iterable, Union
 
 import aswan
 import datazimmer as dz
 import pandas as pd
+import psutil
 from aswan.utils import add_url_params
 from atqo import parallel_map
 from bs4 import BeautifulSoup
@@ -34,7 +35,6 @@ from .parse import (
     parse_seller,
     parse_utility_cost,
 )
-from .utils import _check_missing_col
 
 SLEEP_TIME = 3
 
@@ -101,7 +101,7 @@ class InitHandler(aswan.RequestSoupHandler):
 class PropertyDzA(dz.DzAswan):
     name: str = "ingatlan"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [rent_url], ListingHandler: [], AdHandler: []}
+    starters = {InitHandler: [rent_url]}
 
 
 property_table = dz.ScruTable(RealEstate)
@@ -141,63 +141,47 @@ PARSER_MAPPING = {
 }
 
 
-def parse_ad_pcev(pcev: "aswan.depot.ParsedCollectionEvent"):
-    soup = BeautifulSoup(pcev.content, "html5lib")
-    data_elem = soup.select_one("#listing")
+def parse_ad_pcev(pcevs: Iterable["aswan.ParsedCollectionEvent"]):
+    data_elems = [
+        BeautifulSoup(pcev.content, "html5lib").select_one("#listing") for pcev in pcevs
+    ]
 
     # PROPERTY PARSING
-    property_df = pd.DataFrame([json.loads(data_elem.get("data-listing"))]).pipe(
-        parse_property
-    )
+    property_df = pd.DataFrame(
+        [json.loads(de.get("data-listing")) for de in data_elems]
+    ).pipe(parse_property)
 
     for colname, (parser, table) in PARSER_MAPPING.items():
-        if property_df[colname].astype(bool).all():
-            (
-                parser(property_df)
-                .reindex(table.feature_cols, axis=1)
-                .pipe(lambda _df: table.replace_records(_df))
+        if property_df[colname].astype(bool).any():
+            table.replace_records(
+                parser(property_df).reindex(table.feature_cols, axis=1)
             )
 
-    property_df = (
-        property_df.drop(
-            columns=[*UNUSED_COLS, *PARSER_MAPPING.keys()], errors="ignore"
-        )
-        .pipe(lambda _df: _check_missing_col(df=_df, table=property_table))
-        .pipe(property_table.replace_records)
-    )
+    property_table.replace_records(property_df)
 
     # LOCATION PARSING
-    pd.DataFrame([json.loads(data_elem.get("data-location-hierarchy"))]).pipe(
-        parse_location
-    ).pipe(location_table.replace_records)
+    pd.DataFrame(
+        [json.loads(de.get("data-location-hierarchy")) for de in data_elems]
+    ).pipe(parse_location).pipe(location_table.replace_records)
 
 
-def parse_listing_pcev(pcev: "aswan.depot.ParsedCollectionEvent"):
-    (
-        pd.DataFrame(parse_listing(BeautifulSoup(pcev.content, "html5lib")))
-        .assign(
-            **{RealEstateRecord.recorded: datetime.fromtimestamp(pcev.cev.timestamp)}
-        )
-        .set_index(property_rec_table.index_cols)
-        .pipe(property_rec_table.extend)
-    )
+def parse_listing_pcev(pcevs: Iterable["aswan.ParsedCollectionEvent"]):
+    df = pd.concat(map(parse_listing, pcevs))
+    if not df.empty:
+        property_rec_table.extend(df)
 
 
 @dz.register_data_loader(extra_deps=[PropertyDzA])
 def collect():
-    list(
-        parallel_map(
-            parse_ad_pcev,
-            [*PropertyDzA().get_unprocessed_events(AdHandler)],
-            pbar=True,
-            raise_errors=True,
-        )
-    )
-    list(
-        parallel_map(
-            parse_listing_pcev,
-            [*PropertyDzA().get_unprocessed_events(ListingHandler)],
-            pbar=True,
-            raise_errors=True,
-        )
-    )
+    batch_size = 200
+    workers = int(psutil.virtual_memory().available / 10**9 / 2.5)
+    pairs = [(AdHandler, parse_ad_pcev), (ListingHandler, parse_listing_pcev)]
+    for handler_cls, fun in pairs:
+        it = batched(PropertyDzA().get_unprocessed_events(handler_cls), batch_size)
+        list(parallel_map(fun, it, pbar=True, verbose=True, workers=workers))
+
+
+def batched(iterable, n):
+    it = iter(iterable)
+    while batch := list(islice(it, n)):
+        yield batch

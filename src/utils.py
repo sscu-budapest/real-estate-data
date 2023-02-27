@@ -21,21 +21,15 @@ class MissingVariable(Exception):
     "Missing variable from meta config"
 
 
-def _check_missing_col(df: "pd.DataFrame", table: "dz.ScruTable"):
+def check_missing_col(df: "pd.DataFrame", table: "dz.ScruTable"):
     remaining_df = df.dropna(axis=1, how="all").drop(
         columns=table.feature_cols, errors="ignore"
     )
     if remaining_df.empty:
         return df.reindex(table.feature_cols, axis=1)
     else:
-        try:
-            raise MissingVariable
-        except MissingVariable as ec:
-            logger.exception(
-                "Missing variable",
-                cols=remaining_df.columns,
-            )
-            raise ec
+        logger.info("Missing variable", cols=remaining_df.columns.tolist())
+        raise MissingVariable()
 
 
 def _parse_url(url):

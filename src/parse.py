@@ -1,7 +1,9 @@
 import re
-from typing import TYPE_CHECKING
+from datetime import datetime
 
+import aswan
 import pandas as pd
+from bs4 import BeautifulSoup
 
 from .meta import (
     Contact,
@@ -16,13 +18,11 @@ from .meta import (
     UtilityCost,
 )
 
-if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
 
-
-def parse_property(df: pd.DataFrame):
+def parse_property(df: pd.DataFrame) -> pd.DataFrame:
     return (
-        df.set_index(RealEstate.id)
+        df.drop_duplicates(RealEstate.id)
+        .set_index(RealEstate.id)
         .rename(columns={"type": "offer_type"})
         .drop(columns="minimumRentalPeriodMonth")
         .pipe(
@@ -53,6 +53,7 @@ def parse_location(df: pd.DataFrame):
         .explode()
         .apply(pd.Series)
         .rename(_camel_to_snake, axis=1)
+        .drop_duplicates(Location.id)
         .set_index(Location.id)
     )
 
@@ -212,8 +213,11 @@ def parse_listing_ad_id(card: "BeautifulSoup"):
     return card.get("data-id")
 
 
-def parse_listing(soup: "BeautifulSoup"):
-    return [
+def parse_listing(pcev: aswan.ParsedCollectionEvent):
+    cont = pcev.content
+    if not isinstance(cont, (bytes, str)):
+        return pd.DataFrame()
+    recs = [
         {
             RealEstateRecord.property_id.id: parse_listing_ad_id(card),
             RealEstateRecord.photo_count: (
@@ -231,8 +235,11 @@ def parse_listing(soup: "BeautifulSoup"):
                 parse_listing_data(card, ".listing__data--balcony-size")
             ),
         }
-        for card in soup.select(".listing")
+        for card in BeautifulSoup(cont, "html5lib").select(".listing")
     ]
+    return pd.DataFrame(recs).assign(
+        **{RealEstateRecord.recorded: datetime.fromtimestamp(pcev.cev.timestamp)}
+    )
 
 
 def _camel_to_snake(name):
