@@ -171,3 +171,4 @@ dask-worker-space
 listing/
 source_data/
 location/
+draft*.ipynb
