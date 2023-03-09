@@ -36,7 +36,7 @@ from .parse import (
     parse_utility_cost,
 )
 
-SLEEP_TIME = 3
+SLEEP_TIME = 2
 
 rent_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
 
@@ -185,3 +185,4 @@ def batched(iterable, n):
     it = iter(iterable)
     while batch := list(islice(it, n)):
         yield batch
+FileNotFoundError(2, 'No such file or directory')
