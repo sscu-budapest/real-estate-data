@@ -185,4 +185,3 @@ def batched(iterable, n):
     it = iter(iterable)
     while batch := list(islice(it, n)):
         yield batch
-FileNotFoundError(2, 'No such file or directory')
