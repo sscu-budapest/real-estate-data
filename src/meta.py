@@ -14,6 +14,20 @@ class Seller(dz.AbstractEntity):
 
 class Location(dz.AbstractEntity):
     id = dz.Index & int
+    type = str
+    name = str
+    name_postfix = str
+    slug = str
+    coordinates = str
+    bounds = str
+    url_part = str
+    parent_id = float
+    is_office_building = float
+    usable_in_ad = float
+    polygon = str
+    inflection_from = str
+    inflection_at = str
+    zip_code = str
 
 
 class RealEstate(dz.AbstractEntity):
