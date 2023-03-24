@@ -8,9 +8,9 @@ stages:
       size: 5046
     params:
       zimmer.yaml:
-        aswan_projects.ingatlan.current_leaf: 417eb978a0d1350a7d6f
+        aswan_projects.ingatlan.current_leaf: d1d856530d04fa040dd3
     outs:
     - path: data/ingatlan/ingatlan/complete
-      md5: c7ea7c3522a746e96054f2db0f8698ee.dir
-      size: 72478724
+      md5: e0b4dc21e993c839ee1b2d0c75a40cb2.dir
+      size: 72994584
       nfiles: 10
