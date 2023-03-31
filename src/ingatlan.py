@@ -36,7 +36,7 @@ from .parse import (
     parse_utility_cost,
 )
 
-SLEEP_TIME = 2
+SLEEP_TIME = 1
 
 rent_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
 
