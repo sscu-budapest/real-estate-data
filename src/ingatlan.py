@@ -98,8 +98,14 @@ class InitHandler(aswan.RequestSoupHandler):
         )
 
 
-class PropertyDzA(dz.DzAswan):
+class PropertyRentDzA(dz.DzAswan):
     name: str = "ingatlan"
+    cron: str = "0 00 * * *"
+    starters = {InitHandler: [rent_url]}
+
+
+class PropertySaleDzA(dz.DzAswan):
+    name: str = "ingatlan_sale"
     cron: str = "0 00 * * *"
     starters = {InitHandler: [rent_url]}
 
@@ -171,13 +177,13 @@ def parse_listing_pcev(pcevs: Iterable["aswan.ParsedCollectionEvent"]):
         property_rec_table.extend(df)
 
 
-@dz.register_data_loader(extra_deps=[PropertyDzA])
+@dz.register_data_loader(extra_deps=[PropertyRentDzA])
 def collect():
     batch_size = 200
     workers = int(psutil.virtual_memory().available / 10**9 / 2.5)
     pairs = [(AdHandler, parse_ad_pcev), (ListingHandler, parse_listing_pcev)]
     for handler_cls, fun in pairs:
-        it = batched(PropertyDzA().get_unprocessed_events(handler_cls), batch_size)
+        it = batched(PropertyRentDzA().get_unprocessed_events(handler_cls), batch_size)
         list(parallel_map(fun, it, pbar=True, verbose=True, workers=workers))
 
 
