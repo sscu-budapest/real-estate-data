@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from itertools import islice
 from typing import Iterable, Union
 
@@ -38,13 +39,16 @@ from .parse import (
 
 SLEEP_TIME = 2
 
-rent_url = dz.SourceUrl("https://ingatlan.com/lista/kiado")
+ing_url = dz.SourceUrl("https://ingatlan.com")
+
+rent_url = f"{ing_url}/lista/kiado"
+sale_url = f"{ing_url}/lista/elado"
 
 
 class AdHandler(aswan.RequestHandler):
     max_in_parallel = 1
     process_indefinitely: bool = True
-    url_root = "https://ingatlan.com"
+    url_root = ing_url
 
     def parse(self, blob):
         return blob
@@ -63,6 +67,9 @@ class AdHandler(aswan.RequestHandler):
     def get_sleep_time():
         return SLEEP_TIME
 
+    def start_session(self, _):
+        time.sleep(60 * 5)
+
 
 class ListingHandler(aswan.RequestSoupHandler):
     max_in_parallel = 1
@@ -78,6 +85,9 @@ class ListingHandler(aswan.RequestSoupHandler):
     @staticmethod
     def get_sleep_time():
         return SLEEP_TIME
+
+    def start_session(self, _):
+        time.sleep(60 * 5)
 
 
 def _parse_page_count(soup: "BeautifulSoup") -> int:
@@ -107,7 +117,7 @@ class PropertyRentDzA(dz.DzAswan):
 class PropertySaleDzA(dz.DzAswan):
     name: str = "ingatlan_sale"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [rent_url]}
+    starters = {InitHandler: [sale_url]}
 
 
 property_table = dz.ScruTable(RealEstate)
