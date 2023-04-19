@@ -9,6 +9,9 @@ import datazimmer as dz
 import pandas as pd
 import psutil
 from aswan.utils import add_url_params
+from io import BytesIO
+import numpy as np
+import requests
 from atqo import parallel_map
 from bs4 import BeautifulSoup
 
@@ -100,7 +103,16 @@ class InitHandler(aswan.RequestSoupHandler):
         url = soup.find("link", attrs={"rel": "alternate", "hreflang": "hu"}).get(
             "href"
         )
-        page_count = _parse_page_count(soup=soup)
+        page_count = np.ceil(json.load(
+            BytesIO(
+                requests.get(
+                    f"https://ingatlan.com/_filter/count-results/{url.split('/')[-1]}",
+                    headers={
+                        "user-agent": "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36"
+                    },
+                ).content
+            )
+        )["found"] / 20).astype(int)
 
         self.register_links_to_handler(
             links=[add_url_params(url, {"page": p}) for p in range(1, page_count + 1)],
