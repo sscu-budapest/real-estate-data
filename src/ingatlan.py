@@ -1,17 +1,14 @@
 import json
-import re
 import time
 from itertools import islice
 from typing import Iterable, Union
 
 import aswan
 import datazimmer as dz
+import numpy as np
 import pandas as pd
 import psutil
 from aswan.utils import add_url_params
-from io import BytesIO
-import numpy as np
-import requests
 from atqo import parallel_map
 from bs4 import BeautifulSoup
 
@@ -44,8 +41,8 @@ SLEEP_TIME = 2
 
 ing_url = dz.SourceUrl("https://ingatlan.com")
 
-rent_url = f"{ing_url}/lista/kiado"
-sale_url = f"{ing_url}/lista/elado"
+rent_query = "kiado"
+sale_query = "elado"
 
 
 class AdHandler(aswan.RequestHandler):
@@ -93,29 +90,17 @@ class ListingHandler(aswan.RequestSoupHandler):
         time.sleep(60 * 5)
 
 
-def _parse_page_count(soup: "BeautifulSoup") -> int:
-    pagination_text = soup.select_one(".pagination__page-number").get_text(strip=True)
-    return int(re.search(r"(\d+) / (\d+) oldal", pagination_text).group(2))
-
-
-class InitHandler(aswan.RequestSoupHandler):
-    def parse(self, soup: "BeautifulSoup"):
-        url = soup.find("link", attrs={"rel": "alternate", "hreflang": "hu"}).get(
-            "href"
-        )
-        page_count = np.ceil(json.load(
-            BytesIO(
-                requests.get(
-                    f"https://ingatlan.com/_filter/count-results/{url.split('/')[-1]}",
-                    headers={
-                        "user-agent": "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36"
-                    },
-                ).content
-            )
-        )["found"] / 20).astype(int)
+class InitHandler(aswan.RequestJsonHandler):
+    def parse(self, blob: dict):
+        ad_count = blob["found"]
+        page_count = np.ceil(ad_count / 20).astype(int)
+        query_str = self._url.split("/")[-1]
 
         self.register_links_to_handler(
-            links=[add_url_params(url, {"page": p}) for p in range(1, page_count + 1)],
+            links=[
+                add_url_params(f"{ing_url}/lista/{query_str}", {"page": p})
+                for p in range(1, page_count + 1)
+            ],
             handler_cls=ListingHandler,
         )
 
@@ -123,13 +108,13 @@ class InitHandler(aswan.RequestSoupHandler):
 class PropertyRentDzA(dz.DzAswan):
     name: str = "ingatlan"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [rent_url]}
+    starters = {InitHandler: [f"{ing_url}/_filter/count-results/{rent_query}"]}
 
 
 class PropertySaleDzA(dz.DzAswan):
     name: str = "ingatlan_sale"
     cron: str = "0 00 * * *"
-    starters = {InitHandler: [sale_url]}
+    starters = {InitHandler: [f"{ing_url}/_filter/count-results/{sale_query}"]}
 
 
 property_table = dz.ScruTable(RealEstate)
