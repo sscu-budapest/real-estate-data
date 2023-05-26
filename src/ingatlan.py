@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from itertools import islice
 from typing import Iterable, Union
@@ -75,7 +76,8 @@ class ListingHandler(aswan.RequestSoupHandler):
     max_in_parallel = 1
 
     def parse(self, soup: "BeautifulSoup"):
-        ad_ids = [int(e.get("data-id")) for e in soup.select(".listing")]
+        # ad_ids = [int(e.get("data-id")) for e in soup.select(".listing")]
+        ad_ids = [s["href"][1:] for s in soup.find_all("a", href=re.compile(r"^/\d+"))]
         self.register_links_to_handler(
             links=[f"{AdHandler.url_root}/{ad_id}" for ad_id in ad_ids],
             handler_cls=AdHandler,
