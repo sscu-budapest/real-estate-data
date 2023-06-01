@@ -217,29 +217,62 @@ def parse_listing(pcev: aswan.ParsedCollectionEvent):
     cont = pcev.content
     if not isinstance(cont, (bytes, str)):
         return pd.DataFrame()
-    recs = [
-        {
-            RealEstateRecord.property_id.id: parse_listing_ad_id(card),
-            RealEstateRecord.photo_count: (
-                parse_listing_data(card, ".listing__photos-count")
-            ),
-            RealEstateRecord.price: parse_listing_data(card, ".price"),
-            RealEstateRecord.address: parse_listing_data(card, ".listing__address"),
-            RealEstateRecord.area_size: (
-                parse_listing_data(card, ".listing__data--area-size")
-            ),
-            RealEstateRecord.room_count: (
-                parse_listing_data(card, ".listing__data--room-count")
-            ),
-            RealEstateRecord.balcony_size: (
-                parse_listing_data(card, ".listing__data--balcony-size")
-            ),
-        }
-        for card in BeautifulSoup(cont, "html5lib").select(".listing")
-    ]
+    soup = BeautifulSoup(cont, "html5lib")
+    recs = []
+    for c, fun in [(".listing", old_card_parser), (".listing-card", new_card_parser)]:
+        recs.extend(map(fun, soup.select(c)))
     return pd.DataFrame(recs).assign(
         **{RealEstateRecord.recorded: datetime.fromtimestamp(pcev.cev.timestamp)}
     )
+
+
+def get_by_word(card, word):
+    wspan = card.find("span", text=word)
+    if wspan is not None:
+        return getattr(wspan.find_next("span"), "text", "").strip()
+
+
+def get_by_cls(card, c):
+    return getattr(card.find("span", class_=c), "text", "").strip()
+
+
+def old_card_parser(card):
+    return {
+        RealEstateRecord.property_id.id: parse_listing_ad_id(card),
+        RealEstateRecord.photo_count: (
+            parse_listing_data(card, ".listing__photos-count")
+        ),
+        RealEstateRecord.price: parse_listing_data(card, ".price"),
+        RealEstateRecord.address: parse_listing_data(card, ".listing__address"),
+        RealEstateRecord.area_size: (
+            parse_listing_data(card, ".listing__data--area-size")
+        ),
+        RealEstateRecord.room_count: (
+            parse_listing_data(card, ".listing__data--room-count")
+        ),
+        RealEstateRecord.balcony_size: (
+            parse_listing_data(card, ".listing__data--balcony-size")
+        ),
+    }
+
+
+def new_card_parser(card):
+    word_matches = {
+        RealEstateRecord.photo_count: "photo_camera",
+        RealEstateRecord.area_size: "Alapterület",
+        RealEstateRecord.room_count: "Szobák",
+        RealEstateRecord.balcony_size: "Erkély",
+    }
+    c_matches = {
+        RealEstateRecord.price: "text-onyx",
+        RealEstateRecord.address: "d-block",
+    }
+
+    return {
+        RealEstateRecord.property_id.id: card.get("href", "")[1:],
+        **{k: get_by_word(card, v) for k, v in word_matches.items()},
+        **{k: get_by_cls(card, v) for k, v in c_matches.items()},
+    }
 
 
 def _camel_to_snake(name):
