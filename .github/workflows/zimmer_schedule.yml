@@ -1,7 +1,7 @@
 name: Scheduled zimmer-project
 on:
   schedule:
-  - cron: 0 06 * * *
+  - cron: 0 6 * * *
 jobs:
   cron-run-zimmer-project:
     runs-on: ubuntu-latest
@@ -24,4 +24,4 @@ jobs:
         ASWAN_AUTH_PASS: ${{ secrets.ASWAN_AUTH_PASS }}
         ASWAN_AUTH_HEX: ${{ secrets.ASWAN_AUTH_HEX }}
         ASWAN_REMOTE: ${{ secrets.ASWAN_REMOTE }}
-      run: dz build-meta && dz update && dz run --commit && dz publish-data
+      run: dz setup-dvc && dz build-meta && dz update && dz run --commit && dz publish-data

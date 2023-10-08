@@ -1,5 +1,6 @@
 name: ingatlan
 version: v0.1
+cron: "0 6 * * *"
 aswan_projects:
   ingatlan:
     current_leaf: 313061f5e40b70241422
