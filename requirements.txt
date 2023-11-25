@@ -1,4 +1,5 @@
 datazimmer[collect]
+python-dotenv
 fabric==3.0.0
 invoke==2.0.0
 psutil

@@ -1,0 +1,30 @@
+{
+    "manifest_version": 3,
+    "name": "IngatlanScrape",
+    "version": "1.0",
+    "description": "Scrapes",
+    "background": {
+        "service_worker": "background-script.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://ingatlan.com/*"
+            ],
+            "js": [
+                "main.js"
+            ]
+        }
+    ],
+    "commands": {
+        "start-scrape": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+L"
+            },
+            "description": "Scrapes"
+        }
+    },
+    "permissions": [
+        "activeTab"
+    ]
+}
