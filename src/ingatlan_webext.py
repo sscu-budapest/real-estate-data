@@ -1,8 +1,6 @@
-import datetime as dt
 import json
 import os
 import re
-from pathlib import Path
 from subprocess import Popen
 from time import sleep
 
@@ -14,7 +12,6 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from parquetranger import TableRepo
 from tqdm import tqdm
-from tqdm.notebook import tqdm
 
 load_dotenv()
 
@@ -217,9 +214,10 @@ def collect(proc_last: bool = True):
     non_clicked = dump_last_get_nonclicked() if proc_last else []
 
     proc_one = Popen(["google-chrome"])
-    proc_search = Popen(["./chrome-looper.sh", "120", "10"])
+    sleep(1)
+    proc_search = Popen(["./chrome-looper.sh", "120", "1"])
     sleep(10)
-    # project.depot.current.purge()
+    project.depot.current.purge()
     project.run(urls_to_overwrite={WH: [search_init_url]}, force_sync=True)
 
     proc_one.kill()
@@ -227,6 +225,7 @@ def collect(proc_last: bool = True):
     sleep(4)
 
     proc_two = Popen(["google-chrome"])
+    sleep(1)
     proc_details = Popen(["./chrome-looper.sh", "120", "1"])
     sleep(10)
 
