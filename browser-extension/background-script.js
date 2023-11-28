@@ -28,14 +28,13 @@ function postBackContent(message) {
                 } else {
                     console.error('Failed to send page source.');
                 }
-                if (message.goOn) return resend(false);
-                if (message.askNext) resend(true)
+                if (message.askNext) resend()
             })
             .catch((error) => {
                 console.error('Error:', error);
             });
     } else {
-        if (message.askNext) resend(true);
+        if (message.askNext) resend();
     }
 
 
@@ -66,16 +65,14 @@ async function tabSender(command, payload) {
         })
 }
 
-async function resend(withUrl) {
-    if (withUrl) {
-        await sleep(Math.floor(Math.random() * 1300) + 3700)
-        sendNextUrlToTab()
-    }
+async function resend() {
+    await sleep(Math.floor(Math.random() * 1300) + 3700)
+    getNextUrlAndSentToTab()
     await sleep(Math.floor(Math.random() * 3200) + 1800)
     tabSender("go-on")
 }
 
-function sendNextUrlToTab() {
+function getNextUrlAndSentToTab() {
     return fetch(urlRespEndPoint).then((urlResp) => {
         if (urlResp.ok) {
             console.log("sending next url to tabs", urlResp)
@@ -102,8 +99,8 @@ async function initWithSomeWaiting() {
     console.log("started waiting for urls")
     for (const i of Array(300)) {
         console.log("getting next url")
-        await sleep(5000)
-        if (await sendNextUrlToTab()) {
+        await sleep(3000)
+        if (await getNextUrlAndSentToTab()) {
 
             await sleep(Math.floor(Math.random() * 5200) + 1800)
             tabSender("go-on")
@@ -114,8 +111,4 @@ async function initWithSomeWaiting() {
 }
 
 chrome.runtime.onMessage.addListener(postBackContent);
-//chrome.commands.onCommand.addListener(tabSender);
-
 chrome.commands.onCommand.addListener(initWithSomeWaiting);
-
-//initWithSomeWaiting()
