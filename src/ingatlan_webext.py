@@ -11,9 +11,11 @@ from aswan.constants import WE_SOURCE_K
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from parquetranger import TableRepo
-from tqdm import tqdm
+from structlog import get_logger
 
 load_dotenv()
+
+logger = get_logger(ctx="ingatlan-webext")
 
 EXPORT_ROOT = os.environ["WEBEXT_EXPORT_ROOT"]
 
@@ -56,7 +58,7 @@ class WH(aswan.WebExtHandler):
         we_resp_dic: dict = json.loads(we_resp)
         source = we_resp_dic[WE_SOURCE_K]
         if self._url == search_init_url:
-            soup = BeautifulSoup(source)
+            soup = BeautifulSoup(source, "html5lib")
             n_total = int(
                 "".join(
                     soup.find(string=re.compile(".*találat"))
@@ -80,9 +82,13 @@ class WhOnce(aswan.WebExtHandler):
 
 def run_details(non_clicked):
     rentals = []
-    for pcev in tqdm(project.depot.get_handler_events(WH, from_current=True)):
-        for a in BeautifulSoup(pcev.content).find_all("a", class_="listing-card"):
+    logger.info("adding detail pages for parsing")
+    for pcev in project.depot.get_handler_events(WH, from_current=True):
+        for a in BeautifulSoup(pcev.content, "html5lib").find_all(
+            "a", class_="listing-card"
+        ):
             rentals.append(url_root + a["href"])
+    logger.info(f"found {len(rentals)} listings for links")
     project.continue_run(
         urls_to_register={WhOnce: rentals},
         urls_to_overwrite={WhOnce: non_clicked},
@@ -91,10 +97,8 @@ def run_details(non_clicked):
 
 
 def get_search_recs():
-    for pcev in tqdm(
-        project.depot.get_handler_events(WH, only_latest=False, past_runs=1)
-    ):
-        soup = BeautifulSoup(pcev.content)
+    for pcev in project.depot.get_handler_events(WH, only_latest=False, past_runs=1):
+        soup = BeautifulSoup(pcev.content, "html5lib")
         try:
             page_n = int(pcev.url.split("=")[-1])
         except ValueError:
@@ -103,7 +107,7 @@ def get_search_recs():
             yield (
                 {
                     "page_no": page_n,
-                    "price": ablock.find(string=re.compile(".*\s+Ft/hó.*")),
+                    "price": ablock.find(string=re.compile(r".*\s+Ft/hó.*")),
                     "loc": ablock.find(
                         "span",
                         class_="d-block fw-500 fs-7 text-onyx font-family-secondary",
@@ -151,10 +155,10 @@ def get_search_df():
 
 
 def get_detail_recs():
-    for opcev in tqdm(
-        project.depot.get_handler_events(WhOnce, only_latest=False, past_runs=1)
+    for opcev in project.depot.get_handler_events(
+        WhOnce, only_latest=False, past_runs=1
     ):
-        soup = BeautifulSoup(opcev.content)
+        soup = BeautifulSoup(opcev.content, "html5lib")
         number_elem = soup.find(class_="contact-phone-number")
         number_revealed = False
         gone = (
@@ -190,7 +194,10 @@ def get_detail_recs():
 
 
 def dump_last_get_nonclicked():
-    search_trepo.extend(get_search_df())
+    logger.info("getting non-clicked listings")
+    search_df = get_search_df()
+    logger.info(f"extending search table with {search_df.shape[0]} records")
+    search_trepo.extend(search_df)
 
     detail_df = pd.DataFrame(get_detail_recs()).assign(
         id_last_digit=lambda df: df["id"].astype(str).str[-1]
@@ -207,6 +214,7 @@ def dump_last_get_nonclicked():
         ]
         .index
     )
+    logger.info(f"found {len(non_clicked)} listings")
     return [f"{url_root}/{i}" for i in non_clicked]
 
 
@@ -230,7 +238,9 @@ def collect(proc_last: bool = True):
     sleep(10)
 
     run_details(non_clicked)
+    logger.info("commiting run")
     project.commit_current_run()
+    logger.info("commited, killing chromes")
 
     proc_details.kill()
     sleep(3)

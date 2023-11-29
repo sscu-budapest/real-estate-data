@@ -5,3 +5,4 @@ invoke==2.0.0
 psutil
 unidecode
 tqdm
+html5lib
