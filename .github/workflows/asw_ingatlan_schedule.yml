@@ -1,7 +1,7 @@
 name: Scheduled ingatlan
 on:
   schedule:
-  - cron: 0 13 * * *
+  - cron: 0 3 * * *
 jobs:
   cron-run-ingatlan:
     runs-on: [self-hosted]
