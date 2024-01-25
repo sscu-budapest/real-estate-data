@@ -1,10 +1,11 @@
 name: Scheduled ingatlan
 on:
   schedule:
-  - cron: 0 03 * * *
+  - cron: 0 3 * * *
 jobs:
   cron-run-ingatlan:
     runs-on: [self-hosted]
+    timeout-minutes: 600
     steps:
     - uses: actions/checkout@v3
     - name: Scheduled ingatlan
