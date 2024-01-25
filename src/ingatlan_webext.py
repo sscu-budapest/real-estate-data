@@ -137,20 +137,15 @@ def get_search_recs():
 def get_search_df():
     return (
         pd.DataFrame(get_search_recs())
-        .pipe(
-            lambda df: pd.concat(
-                [df.drop("seller", axis=1), pd.DataFrame(df["seller"].tolist())], axis=1
-            )
-        )
         .rename(columns=lambda s: unidecode.unidecode(s.lower()))
         .rename(columns={"websiteurl": "vendor_url"})
+        .reindex(cols, axis=1)
         .assign(
             collection_week=lambda df: df["collected"]
             .pipe(pd.to_datetime)
             .dt.to_period("W")
             .apply(lambda r: r.start_time.date().isoformat())
         )
-        .reindex(cols, axis=1)
     )
 
 
