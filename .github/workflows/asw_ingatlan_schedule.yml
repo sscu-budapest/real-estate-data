@@ -2,10 +2,11 @@ name: Scheduled ingatlan
 on:
   schedule:
   - cron: 0 3 * * *
+  workflow_dispatch:
 jobs:
   cron-run-ingatlan:
     runs-on: [self-hosted]
-    timeout-minutes: 600
+    timeout-minutes: 900
     steps:
     - uses: actions/checkout@v3
     - name: Scheduled ingatlan
