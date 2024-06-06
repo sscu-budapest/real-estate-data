@@ -1,6 +1,8 @@
 import json
 import os
 import re
+from datetime import date
+from pathlib import Path
 from subprocess import Popen
 from time import sleep
 
@@ -104,6 +106,10 @@ def get_search_recs():
         except ValueError:
             page_n = 1
         for ablock in soup.find_all("a", class_="listing-card"):
+            subd = json.loads(
+                ablock.get("data-listings-page--results-listing-listing-value", "{}")
+            )
+
             yield (
                 {
                     "page_no": page_n,
@@ -121,11 +127,8 @@ def get_search_recs():
                         .find_all("div", class_="d-flex")
                     ]
                 )
-                | json.loads(
-                    ablock.get(
-                        "data-listings-page--results-listing-listing-value", "{}"
-                    )
-                )
+                | subd.pop("seller", {})
+                | subd
                 | {
                     "collected": pd.to_datetime(
                         pcev.cev.timestamp, unit="s"
@@ -240,3 +243,6 @@ def collect(proc_last: bool = True):
     proc_details.kill()
     sleep(3)
     proc_two.kill()
+    Path("report.md").write_text(
+        f"- {date.today().isoformat()}\n- tried {len(non_clicked)}"
+    )
