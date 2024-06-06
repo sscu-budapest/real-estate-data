@@ -221,7 +221,7 @@ def collect(proc_last: bool = True):
 
     proc_one = Popen(["google-chrome"])
     sleep(1)
-    proc_search = Popen(["./chrome-looper.sh", "120", "1"])
+    proc_search = Popen(["./chrome-looper.sh", "240", "5"])
     sleep(10)
     project.depot.current.purge()
     project.run(urls_to_overwrite={WH: [search_init_url]}, force_sync=True)
@@ -232,7 +232,7 @@ def collect(proc_last: bool = True):
 
     proc_two = Popen(["google-chrome"])
     sleep(1)
-    proc_details = Popen(["./chrome-looper.sh", "120", "1"])
+    proc_details = Popen(["./chrome-looper.sh", "240", "5"])
     sleep(10)
 
     run_details(non_clicked)

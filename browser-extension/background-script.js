@@ -5,11 +5,18 @@ const urlRespEndPoint = serverURL + 'url'
 
 function postBackContent(message) {
     console.log("post-message", message)
-    const data = {
-        pageSource: message.content,
-        pageUrl: message.url,
-        registerUrls: message.registerUrls
-    };
+    let data = {}
+    if (message.runCommand) {
+        data = { command: message.runCommand }
+
+
+    } else {
+        data = {
+            pageSource: message.content,
+            pageUrl: message.url,
+            registerUrls: message.registerUrls
+        };
+    }
 
     if (message.url) {
         const options = {

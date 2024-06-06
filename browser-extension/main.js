@@ -4,12 +4,28 @@ async function listener(e) {
     console.log("main got message", e);
 
     await sleep(500)
-    const cookieButton = document.querySelector(".CybotCookiebotDialogBodyButton")
+    const cookieButton = document.querySelector("#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll")
     if (cookieButton != undefined) {
         console.log("found cookie button")
         cookieButton.click();
-        await sleep(300)
+        await sleep(800)
+    }
 
+    const iframeCloudflareElem = document.querySelector("iframe[title='Widget containing a Cloudflare security challenge']")
+    if (iframeCloudflareElem != undefined) {
+        console.log("found cloudflare shit")
+        var rect = iframeCloudflareElem.getBoundingClientRect();
+        console.log(rect.top, rect.right, rect.bottom, rect.left);
+        const XPad = 100
+        const YPad = 140
+        const runCommand = ["xdotool", "mousemove", `${rect.x + XPad}`, `${rect.y + YPad}`]
+        chrome.runtime.sendMessage({ url: document.URL, runCommand })
+        console.log("sent command", runCommand);
+        console.log("sleeping waiting for click");
+        await sleep(9 * 1000)
+        chrome.runtime.sendMessage({ url: document.URL, runCommand: ["xdotool", "click", "1"], askNext: true })
+        console.log("sleeping waiting after click");
+        await sleep(30 * 1000)
     }
 
     if (e.navUrl) {
@@ -36,7 +52,9 @@ async function listener(e) {
         return
     }
 
-    await sleep(Math.floor(Math.random() * 2200) + 800);
+    const sleepTime = Math.floor(Math.random() * 2200) + 800;
+    console.log("sleeping ", sleepTime)
+    await sleep(sleepTime);
     const content = document.getElementsByTagName('html')[0].innerHTML
     chrome.runtime.sendMessage({
         content, url: document.URL, registerUrls: [], askNext: true
