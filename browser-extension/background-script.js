@@ -60,8 +60,13 @@ async function tabSender(command, payload) {
             console.log("found tabs to send to", ts)
             tab = ts[0]
             console.log("sending command", command, "payload", payload, "to tab", tab)
-            chrome.tabs.sendMessage(tab.id, { command, ...(payload || {}) })
+            try {
+                chrome.tabs.sendMessage(tab.id, { command, ...(payload || {}) })
+            } catch (error) {
+                tabSender(command, payload)
+            }
             console.log("sent")
+
         }).catch((e) => {
             console.log("fucked up tab")
             console.log(e)
