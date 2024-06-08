@@ -8,12 +8,14 @@ from time import sleep
 
 import aswan
 import pandas as pd
+import polars as pl
 import unidecode
 from aswan.constants import WE_SOURCE_K
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from parquetranger import TableRepo
 from structlog import get_logger
+from tqdm import tqdm
 
 load_dotenv()
 
@@ -29,8 +31,10 @@ url_root = "https://ingatlan.com"
 search_init_url = f"{url_root}/lista/kiado+lakas"
 
 
-search_trepo = TableRepo(f"{EXPORT_ROOT}/search-results", group_cols="collection_week")
-detail_trepo = TableRepo(f"{EXPORT_ROOT}/details", group_cols="id_last_digit")
+search_trepo = TableRepo(
+    f"{EXPORT_ROOT}/search-results-v2", group_cols="collection_week"
+)
+detail_trepo = TableRepo(f"{EXPORT_ROOT}/details-v2", group_cols="id_last_digit")
 
 cols = [
     "id",
@@ -98,49 +102,62 @@ def run_details(non_clicked):
     )
 
 
-def get_search_recs():
-    for pcev in project.depot.get_handler_events(WH, only_latest=False, past_runs=1):
-        soup = BeautifulSoup(pcev.content, "html5lib")
-        try:
-            page_n = int(pcev.url.split("=")[-1])
-        except ValueError:
-            page_n = 1
-        for ablock in soup.find_all("a", class_="listing-card"):
-            subd = json.loads(
-                ablock.get("data-listings-page--results-listing-listing-value", "{}")
+def get_search_recs(past_runs=1):
+    for pcev in tqdm(
+        project.depot.get_handler_events(WH, only_latest=False, past_runs=past_runs),
+        "search pcevs",
+    ):
+        for d in search_results_from_pcev(pcev):
+            yield d
+
+
+def search_result_df_from_pcev(pcev):
+    return pd.DataFrame(search_results_from_pcev(pcev))
+
+
+def search_results_from_pcev(pcev):
+    soup = BeautifulSoup(pcev.content, "lxml")
+    try:
+        page_n = int(pcev.url.split("=")[-1])
+    except ValueError:
+        page_n = 1
+    for ablock in soup.find_all("a", class_="listing-card"):
+        subd = json.loads(
+            ablock.get("data-listings-page--results-listing-listing-value", "{}")
+        )
+
+        yield (
+            {
+                "page_no": page_n,
+                "price": getattr(
+                    ablock.find(string=re.compile(r".*\s+Ft/hó.*")), "text", ""
+                ),
+                "loc": ablock.find(
+                    "span",
+                    class_="d-block fw-500 fs-7 text-onyx font-family-secondary",
+                ).text,
+            }
+            | dict(
+                [
+                    tuple(s.text for s in d.find_all("span"))
+                    for d in ablock.find(class_="d-flex flex-column h-100")
+                    .find("div", class_="justify-content-start")
+                    .find_all("div", class_="d-flex")
+                ]
             )
-
-            yield (
-                {
-                    "page_no": page_n,
-                    "price": ablock.find(string=re.compile(r".*\s+Ft/hó.*")),
-                    "loc": ablock.find(
-                        "span",
-                        class_="d-block fw-500 fs-7 text-onyx font-family-secondary",
-                    ).text,
-                }
-                | dict(
-                    [
-                        tuple(s.text for s in d.find_all("span"))
-                        for d in ablock.find(class_="d-flex flex-column h-100")
-                        .find("div", class_="justify-content-start")
-                        .find_all("div", class_="d-flex")
-                    ]
-                )
-                | subd.pop("seller", {})
-                | subd
-                | {
-                    "collected": pd.to_datetime(
-                        pcev.cev.timestamp, unit="s"
-                    ).isoformat()
-                }
-            )
+            | subd.pop("seller", {})
+            | subd
+            | {"collected": pd.to_datetime(pcev.cev.timestamp, unit="s").isoformat()}
+        )
 
 
-def get_search_df():
+def get_search_df(last_n=1):
+    return pd.DataFrame(get_search_recs(last_n)).pipe(clean_search_df)
+
+
+def clean_search_df(df):
     return (
-        pd.DataFrame(get_search_recs())
-        .rename(columns=lambda s: unidecode.unidecode(s.lower()))
+        df.rename(columns=lambda s: unidecode.unidecode(s.lower()))
         .rename(columns={"websiteurl": "vendor_url"})
         .reindex(cols, axis=1)
         .assign(
@@ -152,11 +169,12 @@ def get_search_df():
     )
 
 
-def get_detail_recs():
-    for opcev in project.depot.get_handler_events(
-        WhOnce, only_latest=False, past_runs=1
+def get_detail_recs(last_n=1):
+    for opcev in tqdm(
+        project.depot.get_handler_events(WhOnce, only_latest=False, past_runs=last_n),
+        "detail pcevs",
     ):
-        soup = BeautifulSoup(opcev.content, "html5lib")
+        soup = BeautifulSoup(opcev.content, "lxml")
         number_elem = soup.find(class_="contact-phone-number")
         number_revealed = False
         gone = (
@@ -170,7 +188,10 @@ def get_detail_recs():
                 number_revealed = True
 
         hero_div = soup.find("div", id="hero-contact")
-        seller_info = {}
+        seller_info = {
+            e.text.split()[0].lower(): e["href"]
+            for e in soup.find_all("a", string=re.compile("sszes hird"))
+        }
         if hero_div is not None:
             for k, clss in [
                 ("seller_main", ["text-onyx", "fs-6"]),
@@ -191,13 +212,13 @@ def get_detail_recs():
         )
 
 
-def dump_last_get_nonclicked():
+def dump_last_get_nonclicked(last_n=1):
     logger.info("getting non-clicked listings")
-    search_df = get_search_df()
+    search_df = get_search_df(last_n)
     logger.info(f"extending search table with {search_df.shape[0]} records")
     search_trepo.extend(search_df)
 
-    detail_df = pd.DataFrame(get_detail_recs()).assign(
+    detail_df = pd.DataFrame(get_detail_recs(last_n)).assign(
         id_last_digit=lambda df: df["id"].astype(str).str[-1]
     )
     detail_trepo.extend(detail_df)
