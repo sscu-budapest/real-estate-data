@@ -8,8 +8,6 @@ function postBackContent(message) {
     let data = {}
     if (message.runCommand) {
         data = { command: message.runCommand }
-
-
     } else {
         data = {
             pageSource: message.content,
@@ -17,7 +15,6 @@ function postBackContent(message) {
             registerUrls: message.registerUrls
         };
     }
-
     if (message.url) {
         const options = {
             method: 'POST',
@@ -73,20 +70,17 @@ async function tabSender(command, payload) {
 }
 
 async function resend() {
-    await sleep(Math.floor(Math.random() * 1300) + 3700)
-    getNextUrlAndSentToTab()
-    await sleep(Math.floor(Math.random() * 3200) + 1800)
-    tabSender("go-on")
+    await initWithSomeWaiting()
 }
 
-function getNextUrlAndSentToTab() {
+async function getNextUrlAndSentToTab() {
     return fetch(urlRespEndPoint).then((urlResp) => {
         if (urlResp.ok) {
             console.log("sending next url to tabs", urlResp)
             urlResp.text().then((navUrl) => tabSender("next-url", { navUrl }).catch((e) => {
                 console.log("fucked up in next send")
                 console.log(e)
-            }))
+            })).then(() => { console.log("waited in then") });
             console.log("sent url to tabs", urlResp)
             return true
         } else {
@@ -104,12 +98,11 @@ function sleep(ms) {
 
 async function initWithSomeWaiting() {
     console.log("started waiting for urls")
-    for (const i of Array(300)) {
+    for (const _ of Array(300)) {
         console.log("getting next url")
-        await sleep(3000)
+        await sleep(Math.floor(Math.random() * 1300) + 300)
         if (await getNextUrlAndSentToTab()) {
-
-            await sleep(Math.floor(Math.random() * 5200) + 1800)
+            await sleep(Math.floor(Math.random() * 3200) + 2800)
             tabSender("go-on")
             return;
         }
