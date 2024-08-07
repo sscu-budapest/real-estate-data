@@ -125,6 +125,25 @@ def search_results_from_pcev(pcev):
         subd = json.loads(
             ablock.get("data-listings-page--results-listing-listing-value", "{}")
         )
+        root_att_class = "d-flex flex-column justify-content-between h-100"
+        att_dic = {}
+        att_root = ablock.find(class_=root_att_class)
+        if att_root is not None:
+            for d in att_root.find("div", class_="justify-content-start").find_all(
+                "div", class_="d-flex"
+            ):
+                k, v = (s.text for s in d.find_all("span"))
+                att_dic[k] = v
+        else:
+            print(
+                "---failed to find att_dir--- \n\n",
+                ablock,
+                "\n\n\n\n",
+                ablock.find(class_=root_att_class.split()),
+                "\n" * 20,
+            )
+        if not att_dic:
+            ValueError("not found att root")
 
         yield (
             {
@@ -137,16 +156,10 @@ def search_results_from_pcev(pcev):
                     class_="d-block fw-500 fs-7 text-onyx font-family-secondary",
                 ).text,
             }
-            | dict(
-                [
-                    tuple(s.text for s in d.find_all("span"))
-                    for d in ablock.find(class_="d-flex flex-column h-100")
-                    .find("div", class_="justify-content-start")
-                    .find_all("div", class_="d-flex")
-                ]
-            )
+            | att_dic
             | subd.pop("seller", {})
             | subd
+            | {"data_id": ablock.get("data-listing-id")}
             | {"collected": pd.to_datetime(pcev.cev.timestamp, unit="s").isoformat()}
         )
 
