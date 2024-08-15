@@ -8,7 +8,6 @@ from time import sleep
 
 import aswan
 import pandas as pd
-import polars as pl
 import unidecode
 from aswan.constants import WE_SOURCE_K
 from bs4 import BeautifulSoup
@@ -63,8 +62,8 @@ class WH(aswan.WebExtHandler):
     def parse(self, we_resp: bytes):
         we_resp_dic: dict = json.loads(we_resp)
         source = we_resp_dic[WE_SOURCE_K]
+        soup = BeautifulSoup(source, "html5lib")
         if self._url == search_init_url:
-            soup = BeautifulSoup(source, "html5lib")
             n_total = int(
                 "".join(
                     soup.find(string=re.compile(".*találat"))
@@ -76,6 +75,8 @@ class WH(aswan.WebExtHandler):
             self.register_links_to_handler(
                 [f"{search_init_url}?page={i}" for i in range(2, n_total // 20 + 2)]
             )
+        if len(soup.find_all("a", class_="listing-card")) == 0:
+            raise aswan.ConnectionError("no listings")
         return source
 
 
@@ -94,12 +95,12 @@ def run_details(non_clicked):
             "a", class_="listing-card"
         ):
             rentals.append(url_root + a["href"])
-    logger.info(f"found {len(rentals)} listings for links")
     project.continue_run(
         urls_to_register={WhOnce: rentals},
         urls_to_overwrite={WhOnce: non_clicked},
         force_sync=True,
     )
+    return rentals
 
 
 def get_search_recs(past_runs=1):
@@ -246,31 +247,39 @@ def dump_last_get_nonclicked(last_n=1):
         ]
         .index
     )
-    logger.info(f"found {len(non_clicked)} listings")
+    logger.info(f"found {len(non_clicked)} non-clicked listings")
     return [f"{url_root}/{i}" for i in non_clicked]
 
 
-def collect(proc_last: bool = True):
+def collect(proc_last: bool = True, continue_last=False):
     non_clicked = dump_last_get_nonclicked() if proc_last else []
-
+    _wm_ws(6)
     proc_one = Popen(["google-chrome"])
-    sleep(1)
+    sleep(3)
+    _wm_ws(7)
     proc_search = Popen(["./chrome-looper.sh", "240", "5"])
     sleep(10)
-    project.depot.current.purge()
-    project.run(urls_to_overwrite={WH: [search_init_url]}, force_sync=True)
+    if continue_last:
+        project.continue_run(force_sync=True)
+    else:
+        project.depot.current.purge()
+        project.run(urls_to_overwrite={WH: [search_init_url]}, force_sync=True)
 
     proc_one.kill()
     proc_search.kill()
     sleep(4)
+    if continue_last:
+        return
 
+    _wm_ws(6)
     proc_two = Popen(["google-chrome"])
-    sleep(1)
+    sleep(3)
+    _wm_ws(7)
     proc_details = Popen(["./chrome-looper.sh", "240", "5"])
     sleep(10)
 
-    run_details(non_clicked)
-    logger.info("commiting run")
+    rentals = run_details(non_clicked)
+    logger.info(f"commiting run of {len(rentals)} new listings")
     project.commit_current_run()
     logger.info("commited, killing chromes")
 
@@ -278,5 +287,19 @@ def collect(proc_last: bool = True):
     sleep(3)
     proc_two.kill()
     Path("report.md").write_text(
-        f"- {date.today().isoformat()}\n- tried {len(non_clicked)}"
+        "\n- ".join(
+            [
+                date.today().isoformat(),
+                f"collected {len(rentals)} rentals",
+                f"tried non clicked {len(non_clicked)}",
+            ]
+        )
     )
+    assert len(rentals) > 9_000
+
+
+def _wm_ws(ws: int):
+    try:
+        Popen(["wmctrl", "-s", str(ws)])
+    except Exception as e:
+        print("no wm", e)
