@@ -295,6 +295,7 @@ def collect(proc_last: bool = True, continue_last=False):
             ]
         )
     )
+    _wm_ws(0)
     assert len(rentals) > 9_000
 
 
