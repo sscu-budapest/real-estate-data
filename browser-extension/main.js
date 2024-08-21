@@ -16,11 +16,9 @@ async function listener(e) {
         console.log("found cloudflare shit")
         var rect = iframeCloudflareElem.getBoundingClientRect();
         console.log(rect.top, rect.right, rect.bottom, rect.left);
-        const XPad = 100
-        const YPad = 140
-        const xCoord = "787"
-        const yCoord = "904"
-        const runCommand = ["xdotool", "mousemove", xCoord, yCoord]
+        const xVal = 1426 // rect.x + 100
+        const yVal = 1190 // rect.y + 140
+        const runCommand = ["xdotool", "mousemove", `${xVal}`, `${yVal}`]
         chrome.runtime.sendMessage({ url: document.URL, runCommand })
         console.log("sent command", runCommand);
         console.log("sleeping waiting for click");
