@@ -11,21 +11,23 @@ async function listener(e) {
         await sleep(800)
     }
 
-    const iframeCloudflareElem = document.querySelector("iframe[title='Widget containing a Cloudflare security challenge']")
+    const iframeCloudflareElem = document.querySelector("svg[id=robot-protection-illustration]")
     if (iframeCloudflareElem != undefined) {
         console.log("found cloudflare shit")
         var rect = iframeCloudflareElem.getBoundingClientRect();
         console.log(rect.top, rect.right, rect.bottom, rect.left);
         const XPad = 100
         const YPad = 140
-        const runCommand = ["xdotool", "mousemove", `${rect.x + XPad}`, `${rect.y + YPad}`]
+        const xCoord = "787"
+        const yCoord = "904"
+        const runCommand = ["xdotool", "mousemove", xCoord, yCoord]
         chrome.runtime.sendMessage({ url: document.URL, runCommand })
         console.log("sent command", runCommand);
         console.log("sleeping waiting for click");
         await sleep(9 * 1000)
         chrome.runtime.sendMessage({ url: document.URL, runCommand: ["xdotool", "click", "1"], askNext: true })
         console.log("sleeping waiting after click");
-        await sleep(30 * 1000)
+        await sleep(20 * 1000)
     }
 
     if (e.navUrl) {
