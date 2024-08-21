@@ -6,3 +6,4 @@ psutil
 unidecode
 tqdm
 html5lib
+lxml
