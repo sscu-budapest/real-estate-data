@@ -172,3 +172,4 @@ listing/
 source_data/
 location/
 draft*.ipynb
+local-syncs.sh
