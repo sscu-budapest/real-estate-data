@@ -1,3 +1,3 @@
-2024-11-04
-- collected 13740 rentals
-- tried non clicked 47
+2024-11-05
+- collected 13816 rentals
+- tried non clicked 59
