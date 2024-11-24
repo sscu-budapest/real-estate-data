@@ -9,8 +9,8 @@ jobs:
     timeout-minutes: 900
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v5
-    - run: pip install -r requirements.txt
+    # - uses: actions/setup-python@v5
+    # - run: pip install -r requirements.txt
     - name: Scheduled ingatlan
       env:
         ZIMMER_AUTH_HEX: ${{ secrets.ZIMMER_AUTH_HEX }}
