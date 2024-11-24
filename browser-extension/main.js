@@ -11,7 +11,6 @@ async function listener(e) {
         await sleep(800)
     }
 
-    // const iframeCloudflareElem = document.querySelector("iframe[title='Widget containing a Cloudflare security challenge']")
     const iframeCloudflareElem = document.querySelector("svg[id=robot-protection-illustration]")
     if (iframeCloudflareElem != undefined) {
         console.log("found cloudflare shit")
@@ -26,7 +25,7 @@ async function listener(e) {
         await sleep(9 * 1000)
         chrome.runtime.sendMessage({ url: document.URL, runCommand: ["xdotool", "click", "1"], askNext: true })
         console.log("sleeping waiting after click");
-        await sleep(30 * 1000)
+        await sleep(20 * 1000)
     }
 
     if (e.navUrl) {
