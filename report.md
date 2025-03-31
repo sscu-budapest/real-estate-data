@@ -1,3 +1,3 @@
-2025-03-30
-- collected 13060 rentals
+2025-03-31
+- collected 13041 rentals
 - tried non clicked 0
