@@ -145,6 +145,15 @@ def search_results_from_pcev(pcev):
             )
         if not att_dic:
             ValueError("not found att root")
+        loc_classes = [
+            "d-block fw-500 fs-7 text-onyx font-family-secondary",
+            "d-block fs-7 text-gray-900",
+        ]
+        loc_elem = None
+        for class_ in loc_classes:
+            loc_elem = ablock.find("span", class_=class_)
+            if loc_elem is not None:
+                break
 
         yield (
             {
@@ -152,10 +161,7 @@ def search_results_from_pcev(pcev):
                 "price": getattr(
                     ablock.find(string=re.compile(r".*\s+Ft/hó.*")), "text", ""
                 ),
-                "loc": ablock.find(
-                    "span",
-                    class_="d-block fw-500 fs-7 text-onyx font-family-secondary",
-                ).text,
+                "loc": loc_elem.text,
             }
             | att_dic
             | subd.pop("seller", {})
