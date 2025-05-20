@@ -1,3 +1,3 @@
-2025-05-19
-- collected 12500 rentals
+2025-05-20
+- collected 12462 rentals
 - tried non clicked 0
