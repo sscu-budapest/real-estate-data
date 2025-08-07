@@ -29,6 +29,7 @@ url_root = "https://ingatlan.com"
 
 search_init_url = f"{url_root}/lista/kiado+lakas"
 sale_init_url = f"{url_root}/lista/elado+lakas"
+init_urls = [search_init_url, sale_init_url]
 
 
 search_trepo = TableRepo(
@@ -64,7 +65,7 @@ class WH(aswan.WebExtHandler):
         we_resp_dic: dict = json.loads(we_resp)
         source = we_resp_dic[WE_SOURCE_K]
         soup = BeautifulSoup(source, "html5lib")
-        if self._url == search_init_url:
+        if self._url in init_urls:
             n_total = int(
                 "".join(
                     soup.find(string=re.compile(".*találat"))
@@ -274,9 +275,7 @@ def collect(proc_last: bool = True, continue_last=False):
         project.continue_run(force_sync=True)
     else:
         project.depot.current.purge()
-        project.run(
-            urls_to_overwrite={WH: [search_init_url, sale_init_url]}, force_sync=True
-        )
+        project.run(urls_to_overwrite={WH: init_urls}, force_sync=True)
 
     proc_one.kill()
     proc_search.kill()
