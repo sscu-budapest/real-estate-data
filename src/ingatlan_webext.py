@@ -74,7 +74,7 @@ class WH(aswan.WebExtHandler):
                 )
             )
             self.register_links_to_handler(
-                [f"{search_init_url}?page={i}" for i in range(2, n_total // 20 + 2)]
+                [f"{self._url}?page={i}" for i in range(2, n_total // 20 + 2)]
             )
         if len(soup.find_all("a", class_="listing-card")) == 0:
             raise aswan.ConnectionError("no listings")
@@ -274,7 +274,9 @@ def collect(proc_last: bool = True, continue_last=False):
         project.continue_run(force_sync=True)
     else:
         project.depot.current.purge()
-        project.run(urls_to_overwrite={WH: [search_init_url]}, force_sync=True)
+        project.run(
+            urls_to_overwrite={WH: [search_init_url, sale_init_url]}, force_sync=True
+        )
 
     proc_one.kill()
     proc_search.kill()
