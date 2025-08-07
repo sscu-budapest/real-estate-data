@@ -28,6 +28,7 @@ project = aswan.Project("ingatlan-w-extension")
 url_root = "https://ingatlan.com"
 
 search_init_url = f"{url_root}/lista/kiado+lakas"
+sale_init_url = f"{url_root}/lista/elado+lakas"
 
 
 search_trepo = TableRepo(
@@ -91,10 +92,12 @@ def run_details(non_clicked):
     rentals = []
     logger.info("adding detail pages for parsing")
     for pcev in project.depot.get_handler_events(WH, from_current=True):
+        if "elado" in pcev.url:
+            continue
         for a in BeautifulSoup(pcev.content, "html5lib").find_all(
             "a", class_="listing-card"
         ):
-            rentals.append(url_root + a["href"])
+            rentals.append(url_root + a["href"].split("?")[0])
     project.continue_run(
         urls_to_register={WhOnce: rentals},
         urls_to_overwrite={WhOnce: non_clicked},
@@ -108,6 +111,8 @@ def get_search_recs(past_runs=1):
         project.depot.get_handler_events(WH, only_latest=False, past_runs=past_runs),
         "search pcevs",
     ):
+        if "elado" in pcev.url:
+            continue
         for d in search_results_from_pcev(pcev):
             yield d
 
@@ -215,7 +220,7 @@ def get_detail_recs(last_n=1):
 
         yield (
             {
-                "id": int(opcev.url.split("/")[-1]),
+                "id": int(opcev.url.split("/")[-1].split("?")[0]),
                 "number_present": number_elem is not None,
                 "number_revealed": number_revealed,
                 "listing_gone": gone,
