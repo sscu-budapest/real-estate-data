@@ -160,6 +160,11 @@ def search_results_from_pcev(pcev):
             loc_elem = ablock.find("span", class_=class_)
             if loc_elem is not None:
                 break
+        try:
+            loc = loc_elem.text
+        except:
+            loc = ""
+            print("no loc elem for", att_dic)
 
         yield (
             {
@@ -167,7 +172,7 @@ def search_results_from_pcev(pcev):
                 "price": getattr(
                     ablock.find(string=re.compile(r".*\s+Ft/hó.*")), "text", ""
                 ),
-                "loc": loc_elem.text,
+                "loc": loc,
             }
             | att_dic
             | subd.pop("seller", {})
