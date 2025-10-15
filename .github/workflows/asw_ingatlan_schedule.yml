@@ -6,7 +6,7 @@ on:
 jobs:
   cron-run-ingatlan:
     runs-on: [self-hosted]
-    timeout-minutes: 900
+    timeout-minutes: 1200
     steps:
     - uses: actions/checkout@v3
     # - uses: actions/setup-python@v5
